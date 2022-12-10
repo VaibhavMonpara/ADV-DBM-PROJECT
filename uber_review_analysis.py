@@ -9,20 +9,18 @@ from pyspark.sql import SparkSession
 
 spark = SparkSession.builder.appName("Uber Reviews").getOrCreate()
 
-
 # ---------------------------------------------------------------------------------------------------------
-# Data Loading
-df_original = spark.read.csv(
+# Data Loading from the csv file
+dataframe_original = spark.read.csv(
     "/Users/csuftitan/Documents/Semester 1/Advanced DBMS/ADV-DBM-PROJECT/Uber_Ride_Reviews.csv", header=True,
     inferSchema=True)
-df_original.show()
-
+dataframe_original.show()
 
 # ---------------------------------------------------------------------------------------------------------
 # Data cleaning
 
 # removing (3) rating records from the dataset
-df_clean = df_original.filter(df_original.ride_rating != 3)
+df_clean = dataframe_original.filter(dataframe_original.ride_rating != 3)
 
 # ---------------------------------------------------------------------------------------------------------
 # tokenization
@@ -30,27 +28,27 @@ tokenizer = Tokenizer(inputCol="ride_review", outputCol="ride_review_tokens")
 df_clean = tokenizer.transform(df_clean)
 
 # ---------------------------------------------------------------------------------------------------------
-# remove custom stop words
-stop_words = ['ourselves', 'hers', 'between', 'yourself', 'driver', 'uber', 'again', 'there',
-              'about', 'once', 'during', 'very', 'having', 'with', 'they', 'own', 'an', 'be',
-              'some', 'for', 'do', 'its', 'yours', 'such', 'into', 'of', 'itself', 'other',
-              'is', 's', 'am', 'or', 'who', 'as', 'from', 'him', 'each', 'the', 'themselves',
-              'until', 'are', 'we', 'these', 'your', 'his', 'through', 'don', 'nor', 'me',
-              'were', 'her', 'more', 'himself', 'this', 'should', 'our', 'their', 'while',
-              'both', 'up', 'to', 'ours', 'had', 'she', 'all', 'when', 'at', 'any', 'before',
-              'them', 'same', 'and', 'been', 'have', 'in', 'will', 'on', 'does', 'yourselves',
-              'then', 'that', 'because', 'what', 'why', 'so', 'can', 'now', 'he', 'you', 'herself',
-              'has', 'just', 'where', 'too', 'only', 'myself', 'which', 'those', 'i', 'after', 'whom',
-              'being', 'if', 'theirs', 'my', 'a', 'by', 'doing', 'it', 'how', 'further', 'was', 'here']
+# remove custom unwanted words that are used in the reviews
+unwanted_words = ['ourselves', 'hers', 'between', 'yourself', 'driver', 'uber', 'again', 'there',
+                  'about', 'once', 'during', 'very', 'having', 'with', 'they', 'own', 'an', 'be',
+                  'some', 'for', 'do', 'its', 'yours', 'such', 'into', 'of', 'itself', 'other',
+                  'is', 's', 'am', 'or', 'who', 'as', 'from', 'him', 'each', 'the', 'themselves',
+                  'until', 'are', 'we', 'these', 'your', 'his', 'through', 'don', 'nor', 'me',
+                  'were', 'her', 'more', 'himself', 'this', 'should', 'our', 'their', 'while',
+                  'both', 'up', 'to', 'ours', 'had', 'she', 'all', 'when', 'at', 'any', 'before',
+                  'them', 'same', 'and', 'been', 'have', 'in', 'will', 'on', 'does', 'yourselves',
+                  'then', 'that', 'because', 'what', 'why', 'so', 'can', 'now', 'he', 'you', 'herself',
+                  'has', 'just', 'where', 'too', 'only', 'myself', 'which', 'those', 'i', 'after', 'whom',
+                  'being', 'if', 'theirs', 'my', 'a', 'by', 'doing', 'it', 'how', 'further', 'was', 'here']
 
-stop_words_remover = StopWordsRemover(inputCol='ride_review_tokens', outputCol='ride_review_clean',
-                                      stopWords=stop_words)
-df_clean = stop_words_remover.transform(df_clean)
+unwanted_words_remover = StopWordsRemover(inputCol='ride_review_tokens', outputCol='ride_review_clean',
+                                          stopWords=unwanted_words)
+df_clean = unwanted_words_remover.transform(df_clean)
 df_clean.show()
 
 # ---------------------------------------------------------------------------------------------------------
 # converting list of strings of a review to list of integers based on
-# frequency of each word in the corpus(total reviews)
+# frequency of each word in total reviews
 cv = CountVectorizer(inputCol="ride_review_clean", outputCol="features")
 cv_model = cv.fit(df_clean)
 cv_train_df = cv_model.transform(df_clean)
@@ -63,7 +61,6 @@ train, test = cv_train_df.randomSplit([0.7, 0.3])
 # train Logistic Regression model
 lr = LogisticRegression(featuresCol='features', labelCol='sentiment')
 lrModel = lr.fit(train)
-
 
 # ---------------------------------------------------------------------------------------------------------
 # Plotting the regression graph
@@ -100,7 +97,6 @@ false_positives = np.arange(1.0, length + 1, 1.) - true_positives
 
 true_positive_rate = true_positives / num_positive
 false_positive_rate = false_positives / (length - num_positive)
-
 
 # ---------------------------------------------------------------------------------------------------------
 # Generate layout and plot data
